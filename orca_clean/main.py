@@ -46,6 +46,7 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError("Boolean value expected.")
 
+
 parser.add_argument(
     "-d",
     "--debug",
@@ -133,7 +134,8 @@ parser.add_argument(
     "--random_val",
     dest="random_val",
     action="store_true",
-    help="Select random value intervals for noise2noise and binary mask alternatives also in validation and not only during training.",
+    help="Select random value intervals for noise2noise and binary mask alternatives also in validation and not only"
+         " during training.",
 )
 
 parser.add_argument(
@@ -346,18 +348,15 @@ if __name__ == "__main__":
 
     log.info("Setting up model")
 
-    unet = None
+    unet = UNet(n_channels=1, n_classes=1, bilinear=False)
+
     if ARGS.pretrained_path:
-        log.debug("Loading model from " + ARGS.pretrained_path)
-        model = torch.load(ARGS.pretrained_path)
-        if hasattr(model, 'unet'):
-            unet = model.unet
-            log.debug("Model: " + str(model.unet))
-    else:
-        log.debug("Building new model")
-        unet = UNet(n_channels=1, n_classes=1, bilinear=False)
-        log.debug("Model: " + str(unet))
-        model = nn.Sequential(OrderedDict([("unet", unet)]))
+        log.debug("Loading model weights from " + ARGS.pretrained_path)
+        unet.load_state_dict(torch.load(ARGS.pretrained_path)['unetState'])
+        unet.transfer_freeze()
+
+    log.debug("Model: " + str(unet))
+    model = nn.Sequential(OrderedDict([("unet", unet)]))
 
     split_fracs = {"train": .7, "val": .15, "test": .15}
     input_data = DatabaseCsvSplit(

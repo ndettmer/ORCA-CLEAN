@@ -40,6 +40,7 @@ class UNet(nn.Module):
         x2 = self.down1(x1)
         x3 = self.down2(x2)
         x4 = self.down3(x3)
+        # bottleneck
         x5 = self.down4(x4)
 
         #upsampling
@@ -51,3 +52,12 @@ class UNet(nn.Module):
 
         #activation function
         return torch.sigmoid(x)
+
+    def transfer_freeze(self):
+        # freeze all
+        for param in self.parameters():
+            param.requires_grad = False
+
+        # unfreeze bottleneck
+        for param in self.down4.parameters():
+            param.requires_grad = True
