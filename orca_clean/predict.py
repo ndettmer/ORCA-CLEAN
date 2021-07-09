@@ -25,6 +25,7 @@ import scipy.io.wavfile
 from math import ceil, floor
 from utils.logging import Logger
 from collections import OrderedDict
+from tensorboardX import SummaryWriter
 
 parser = argparse.ArgumentParser()
 
@@ -107,9 +108,17 @@ parser.add_argument(
     help="Input file could either be a directory with multiple audio files or just one single audio file"
 )
 
+parser.add_argument(
+    "--summary_dir",
+    type=str,
+    default=None,
+    help="The directory to store the tensorboardX summaries."
+)
+
 ARGS = parser.parse_args()
 
 log = Logger("PREDICT", ARGS.debug, ARGS.log_dir)
+
 
 """
 Main function to compute prediction by using a trained model together with the given input
@@ -156,6 +165,25 @@ if __name__ == "__main__":
 
     if torch.cuda.is_available() and ARGS.cuda:
         model = model.cuda()
+
+    if ARGS.summary_dir is not None:
+        writer = SummaryWriter(ARGS.summary_dir)
+
+        def activation_hook(inst, inp, out):
+            writer.add_histogram(repr(inst), out, max_bins=50)
+
+        model.denoiser.inc.register_forward_hook(activation_hook)
+        model.denoiser.down1.register_forward_hook(activation_hook)
+        model.denoiser.down2.register_forward_hook(activation_hook)
+        model.denoiser.down3.register_forward_hook(activation_hook)
+        model.denoiser.down4.register_forward_hook(activation_hook)
+        model.denoiser.up1.register_forward_hook(activation_hook)
+        model.denoiser.up2.register_forward_hook(activation_hook)
+        model.denoiser.up3.register_forward_hook(activation_hook)
+        model.denoiser.up4.register_forward_hook(activation_hook)
+        model.denoiser.outc.register_forward_hook(activation_hook)
+
+        log.debug("Registered all forward hooks.")
 
     model.eval()
 
