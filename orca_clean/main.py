@@ -46,6 +46,7 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError("Boolean value expected.")
 
+
 parser.add_argument(
     "-d",
     "--debug",
@@ -133,7 +134,8 @@ parser.add_argument(
     "--random_val",
     dest="random_val",
     action="store_true",
-    help="Select random value intervals for noise2noise and binary mask alternatives also in validation and not only during training.",
+    help="Select random value intervals for noise2noise and binary mask alternatives also in validation and not only"
+         " during training.",
 )
 
 parser.add_argument(
@@ -243,10 +245,28 @@ parser.add_argument(
     "Validation and test data will not be augmented.",
 )
 
+parser.add_argument(
+    "--initial_weights",
+    type=str,
+    default='',
+    help="Path to pre-trained model's weights"
+)
+
+parser.add_argument(
+    "--pretrained_path",
+    type=str,
+    default='',
+    help="Path to pre-trained model saved with torch.save()"
+)
+
 
 ARGS = parser.parse_args()
 ARGS.cuda = torch.cuda.is_available() and ARGS.cuda
 ARGS.device = torch.device("cuda") if ARGS.cuda else torch.device("cpu")
+ARGS.pretrained_path = ARGS.pretrained_path if os.path.exists(ARGS.pretrained_path) else ''
+if ARGS.pretrained_path:
+    # suppress search for checkpoints when using pre-trained model
+    ARGS.start_scratch = True
 
 log = Logger("TRAIN", ARGS.debug, ARGS.log_dir)
 
@@ -329,6 +349,11 @@ if __name__ == "__main__":
     log.info("Setting up model")
 
     unet = UNet(n_channels=1, n_classes=1, bilinear=False)
+
+    if ARGS.pretrained_path:
+        log.debug("Loading model weights from " + ARGS.pretrained_path)
+        unet.load_state_dict(torch.load(ARGS.pretrained_path)['unetState'])
+        unet.transfer_freeze()
 
     log.debug("Model: " + str(unet))
     model = nn.Sequential(OrderedDict([("unet", unet)]))
