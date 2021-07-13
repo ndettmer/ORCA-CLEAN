@@ -53,11 +53,46 @@ class UNet(nn.Module):
         #activation function
         return torch.sigmoid(x)
 
-    def transfer_freeze(self):
-        # freeze all
-        for param in self.parameters():
-            param.requires_grad = False
+    def transfer_freeze(self, layers=None):
+        if layers is None:
+            layers = []
 
-        # unfreeze bottleneck
-        for param in self.down4.parameters():
-            param.requires_grad = True
+        if 'inc' in layers:
+            for p in self.inc.parameters():
+                p.requires_grad = False
+
+        if 'down1' in layers:
+            for p in self.down1.parameters():
+                p.requires_grad = False
+
+        if 'down2' in layers:
+            for p in self.down2.parameters():
+                p.requires_grad = False
+
+        if 'down3' in layers:
+            for p in self.down3.parameters():
+                p.requires_grad = False
+
+        if 'down4' in layers:
+            for p in self.down4.parameters():
+                p.requires_grad = False
+
+        if 'up1' in layers:
+            for p in self.up1.parameters():
+                p.requires_grad = False
+
+        if 'up2' in layers:
+            for p in self.up2.parameters():
+                p.requires_grad = False
+
+        if 'up3' in layers:
+            for p in self.up3.parameters():
+                p.requires_grad = False
+
+        if 'up4' in layers:
+            for p in self.up4.parameters():
+                p.requires_grad = False
+
+        if 'outc' in layers:
+            for p in self.outc.parameters():
+                p.requires_grad = False
