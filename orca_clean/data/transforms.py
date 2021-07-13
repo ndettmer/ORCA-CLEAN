@@ -437,12 +437,14 @@ class Decompress(object):
         min_bin = int(max(0, math.floor(self.n_fft * self.f_min / self.sr)))
         max_bin = int(min(self.n_fft - 1, math.ceil(self.n_fft * self.f_max / self.sr)))
 
-        spec = F.interpolate(spectrogram, size=(spectrogram.size(2), max_bin - min_bin), mode="nearest").squeeze(dim=0)
-        lower_spec = torch.zeros([1, spectrogram.size(2), min_bin])
-        upper_spec = torch.zeros([1, spectrogram.size(2), (self.n_fft // 2 + 1) - max_bin])
+        batch_size = spectrogram.size(0)
 
-        final_spec = torch.cat((lower_spec, spec), 2)
-        final_spec = torch.cat((final_spec, upper_spec), 2)
+        spec = F.interpolate(spectrogram, size=(spectrogram.size(2), max_bin - min_bin), mode="nearest").squeeze(dim=0)
+        lower_spec = torch.zeros([batch_size, 1, spectrogram.size(2), min_bin])
+        upper_spec = torch.zeros([batch_size, 1, spectrogram.size(2), (self.n_fft // 2 + 1) - max_bin])
+
+        final_spec = torch.cat((lower_spec, spec), 3)
+        final_spec = torch.cat((final_spec, upper_spec), 3)
 
         return final_spec
 

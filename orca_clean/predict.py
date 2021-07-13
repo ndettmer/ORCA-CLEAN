@@ -247,7 +247,7 @@ if __name__ == "__main__":
 
             sample_spec_orig, input, spec_cmplx, filename = input
 
-            print("current file in process, " + str(i) + "-iterations: " + str(filename[0]))
+            print("current files in process, " + str(i) + "-iterations: " + str([str(filename[j]) for j in range(len(filename))]))
 
             if torch.cuda.is_available() and ARGS.cuda:
                 input = input.cuda()
@@ -264,28 +264,31 @@ if __name__ == "__main__":
 
             window = torch.hann_window(n_fft)
 
-            audio_spec = audio_spec.squeeze(dim=0).transpose(0, 1)
+            # iterate over batch
+            for batch_idx in range(len(filename)):
 
-            detected_spec_cmplx = spec_cmplx.squeeze(dim=0).transpose(0, 1)
+                audio_spec_squeezed = audio_spec[batch_idx].squeeze(dim=0).transpose(0, 1)
 
-            if sp is not None:
-                sp.plot_spectrogram(spectrogram=input.squeeze(dim=0), title="",
-                                    output_filepath=ARGS.output_dir + "/net_input_spec_" + str(i) + "_" + filename[0].split("/")[-1].split(".")[0]+".pdf",
-                                    sr=sr, hop_length=hop_length, fmin=fmin, fmax=fmax, show=False, ax_title="spectrogram")
+                detected_spec_cmplx = spec_cmplx[batch_idx].squeeze(dim=0).transpose(0, 1)
 
-                sp.plot_spectrogram(spectrogram=denoised_output.squeeze(dim=0), title="",
-                                    output_filepath=ARGS.output_dir + "/net_out_spec_" + str(i) + "_" + filename[0].split("/")[-1].split(".")[0]+".pdf",
-                                    sr=sr, hop_length=hop_length, fmin=fmin, fmax=fmax, show=False, ax_title="spectrogram")
+                if sp is not None:
+                    sp.plot_spectrogram(spectrogram=input[batch_idx].squeeze(dim=0), title="",
+                                        output_filepath=ARGS.output_dir + "/net_input_spec_" + str(i) + "_" + filename[batch_idx].split("/")[-1].split(".")[0]+".pdf",
+                                        sr=sr, hop_length=hop_length, fmin=fmin, fmax=fmax, show=False, ax_title="spectrogram")
 
-            if concatenate:
-                audio_out_denoised = torch.istft(audio_spec, n_fft, hop_length=hop_length, onesided=True, center=True, window=window)
-                if total_audio is None:
-                    total_audio = audio_out_denoised
+                    sp.plot_spectrogram(spectrogram=denoised_output[batch_idx].squeeze(dim=0), title="",
+                                        output_filepath=ARGS.output_dir + "/net_out_spec_" + str(i) + "_" + filename[batch_idx].split("/")[-1].split(".")[0]+".pdf",
+                                        sr=sr, hop_length=hop_length, fmin=fmin, fmax=fmax, show=False, ax_title="spectrogram")
+
+                if concatenate:
+                    audio_out_denoised = torch.istft(audio_spec_squeezed, n_fft, hop_length=hop_length, onesided=True, center=True, window=window)
+                    if total_audio is None:
+                        total_audio = audio_out_denoised
+                    else:
+                        total_audio = torch.cat((total_audio, audio_out_denoised), 0)
                 else:
-                    total_audio = torch.cat((total_audio, audio_out_denoised), 0)
-            else:
-                total_audio = torch.istft(audio_spec, n_fft, hop_length=hop_length, onesided=True, center=True, window=window)
-                scipy.io.wavfile.write(ARGS.output_dir + "/denoised_" + str(i) + "_" + filename[0].split("/")[-1].split(".")[0]+".wav", sr, total_audio.numpy().T)
+                    total_audio = torch.istft(audio_spec_squeezed, n_fft, hop_length=hop_length, onesided=True, center=True, window=window)
+                    scipy.io.wavfile.write(ARGS.output_dir + "/denoised_" + str(i) + "_" + filename[batch_idx].split("/")[-1].split(".")[0]+".wav", sr, total_audio.numpy().T)
 
         #before or after writing intensity scaling to chose dB value
         scipy.io.wavfile.write(ARGS.output_dir+"/denoised_" + str(i) + "_" + filename[0].split("/")[-1].split(".")[0]+".wav", sr, total_audio.numpy().T)
