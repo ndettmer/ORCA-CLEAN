@@ -138,7 +138,7 @@ class CachedSpectrogram(object):
         for key, value in self.meta.items():
             if not (key in spec_dict and spec_dict[key] == value):
                 return self._compute_and_cache(fn)
-        return spec_dict["data"]
+        return spec_dict["data"], None
 
     def _compute_and_cache(self, fn):
         try:

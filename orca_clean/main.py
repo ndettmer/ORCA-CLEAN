@@ -243,10 +243,28 @@ parser.add_argument(
     "Validation and test data will not be augmented.",
 )
 
+parser.add_argument(
+    "--initial_weights",
+    type=str,
+    default='',
+    help="Path to pre-trained model's weights"
+)
+
+parser.add_argument(
+    "--pretrained_path",
+    type=str,
+    default='',
+    help="Path to pre-trained model saved with torch.save()"
+)
+
 
 ARGS = parser.parse_args()
 ARGS.cuda = torch.cuda.is_available() and ARGS.cuda
 ARGS.device = torch.device("cuda") if ARGS.cuda else torch.device("cpu")
+ARGS.pretrained_path = ARGS.pretrained_path if os.path.exists(ARGS.pretrained_path) else ''
+if ARGS.pretrained_path:
+    # suppress search for checkpoints when using pre-trained model
+    ARGS.start_scratch = True
 
 log = Logger("TRAIN", ARGS.debug, ARGS.log_dir)
 
@@ -328,10 +346,18 @@ if __name__ == "__main__":
 
     log.info("Setting up model")
 
-    unet = UNet(n_channels=1, n_classes=1, bilinear=False)
-
-    log.debug("Model: " + str(unet))
-    model = nn.Sequential(OrderedDict([("unet", unet)]))
+    unet = None
+    if ARGS.pretrained_path:
+        log.debug("Loading model from " + ARGS.pretrained_path)
+        model = torch.load(ARGS.pretrained_path)
+        if hasattr(model, 'unet'):
+            unet = model.unet
+            log.debug("Model: " + str(model.unet))
+    else:
+        log.debug("Building new model")
+        unet = UNet(n_channels=1, n_classes=1, bilinear=False)
+        log.debug("Model: " + str(unet))
+        model = nn.Sequential(OrderedDict([("unet", unet)]))
 
     split_fracs = {"train": .7, "val": .15, "test": .15}
     input_data = DatabaseCsvSplit(
